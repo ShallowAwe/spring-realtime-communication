@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Real-Time API Monitor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 28px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #6c757d;
+            font-size: 14px;
+        }
+
+        .protocol-selector {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .protocol-selector h2 {
+            color: #333;
+            font-size: 18px;
+            margin-bottom: 15px;
+        }
+
+        .protocol-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .protocol-btn {
+            padding: 15px;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: left;
+        }
+
+        .protocol-btn:hover {
+            border-color: #667eea;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(102, 126, 234, 0.2);
+        }
+
+        .protocol-btn.active {
+            border-color: #667eea;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .protocol-btn h3 {
+            font-size: 16px;
+            margin-bottom: 5px;
+        }
+
+        .protocol-btn p {
+            font-size: 12px;
+            opacity: 0.8;
+        }
+
+        .protocol-btn.active p {
+            opacity: 0.9;
+        }
+
+        .status-section {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .status-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+        }
+
+        .status-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+
+        .status-card.websocket {
+            border-color: #667eea;
+        }
+
+        .status-card.sse {
+            border-color: #28a745;
+        }
+
+        .status-card.short-polling {
+            border-color: #ffc107;
+        }
+
+        .status-card.long-polling {
+            border-color: #17a2b8;
+        }
+
+        .status-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .status-title {
+            font-weight: 600;
+            font-size: 14px;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-badge.active {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status-badge.inactive {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .status-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .status-label {
+            font-size: 11px;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        .control-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .control-group h3 {
+            font-size: 14px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .control-buttons {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: #5568d3;
+        }
+
+        .btn-success {
+            background: #28a745;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #218838;
+        }
+
+        .btn-danger {
+            background: #dc3545;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #c82333;
+        }
+
+        .btn-secondary {
+            background: #6c757d;
+            color: white;
+        }
+
+        .btn-secondary:hover {
+            background: #5a6268;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        @media (max-width: 1024px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .panel {
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .panel-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 15px;
+            font-weight: 600;
+            font-size: 16px;
+        }
+
+        .panel-content {
+            padding: 15px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 5px;
+            font-size: 13px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s;
+        }
+
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+
+        .log-entry.info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+
+        .log-entry.success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+
+        .log-entry.error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+
+        .log-entry.warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+
+        .log-time {
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .log-protocol {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 3px;
+            font-size: 10px;
+            font-weight: 600;
+            margin-right: 8px;
+        }
+
+        .log-protocol.ws {
+            background: #667eea;
+            color: white;
+        }
+
+        .log-protocol.sse {
+            background: #28a745;
+            color: white;
+        }
+
+        .log-protocol.sp {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .log-protocol.lp {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .data-entry {
+            background: #f8f9fa;
+            padding: 12px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border-left: 4px solid;
+            animation: slideIn 0.3s;
+        }
+
+        .data-entry.ws {
+            border-color: #667eea;
+        }
+
+        .data-entry.sse {
+            border-color: #28a745;
+        }
+
+        .data-entry.sp {
+            border-color: #ffc107;
+        }
+
+        .data-entry.lp {
+            border-color: #17a2b8;
+        }
+
+        .data-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .data-protocol {
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .data-protocol.ws {
+            background: #667eea;
+            color: white;
+        }
+
+        .data-protocol.sse {
+            background: #28a745;
+            color: white;
+        }
+
+        .data-protocol.sp {
+            background: #ffc107;
+            color: #333;
+        }
+
+        .data-protocol.lp {
+            background: #17a2b8;
+            color: white;
+        }
+
+        .data-time {
+            font-size: 11px;
+            color: #6c757d;
+        }
+
+        .data-entry pre {
+            margin: 0;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            font-size: 12px;
+            color: #333;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #6c757d;
+            padding: 40px 20px;
+        }
+
+        .empty-state svg {
+            width: 64px;
+            height: 64px;
+            margin-bottom: 10px;
+            opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>Real-Time API Monitor Dashboard</h1>
+        <p>Compare WebSocket, SSE, Short Polling, and Long Polling implementations</p>
+    </div>
+
+    <div class="protocol-selector">
+        <h2>Active Protocols</h2>
+        <div class="protocol-buttons">
+            <button class="protocol-btn" id="btn-websocket" onclick="toggleProtocol('websocket')">
+                <h3>WebSocket</h3>
+                <p>Bi-directional real-time</p>
+            </button>
+            <button class="protocol-btn" id="btn-sse" onclick="toggleProtocol('sse')">
+                <h3>Server-Sent Events</h3>
+                <p>Server push updates</p>
+            </button>
+            <button class="protocol-btn" id="btn-short" onclick="toggleProtocol('short')">
+                <h3>Short Polling</h3>
+                <p>Regular interval requests</p>
+            </button>
+            <button class="protocol-btn" id="btn-long" onclick="toggleProtocol('long')">
+                <h3>Long Polling</h3>
+                <p>Hold connection until data</p>
+            </button>
+        </div>
+    </div>
+
+    <div class="status-section">
+        <div class="status-grid">
+            <div class="status-card websocket">
+                <div class="status-header">
+                    <span class="status-title">WebSocket</span>
+                    <span class="status-badge inactive" id="ws-status">Inactive</span>
+                </div>
+                <div class="status-value" id="ws-count">0</div>
+                <div class="status-label">Messages Received</div>
+            </div>
+            <div class="status-card sse">
+                <div class="status-header">
+                    <span class="status-title">Server-Sent Events</span>
+                    <span class="status-badge inactive" id="sse-status">Inactive</span>
+                </div>
+                <div class="status-value" id="sse-count">0</div>
+                <div class="status-label">Events Received</div>
+            </div>
+            <div class="status-card short-polling">
+                <div class="status-header">
+                    <span class="status-title">Short Polling</span>
+                    <span class="status-badge inactive" id="sp-status">Inactive</span>
+                </div>
+                <div class="status-value" id="sp-count">0</div>
+                <div class="status-label">Requests Made</div>
+            </div>
+            <div class="status-card long-polling">
+                <div class="status-header">
+                    <span class="status-title">Long Polling</span>
+                    <span class="status-badge inactive" id="lp-status">Inactive</span>
+                </div>
+                <div class="status-value" id="lp-count">0</div>
+                <div class="status-label">Requests Made</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <div class="control-group">
+            <h3>WebSocket Controls</h3>
+            <div class="control-buttons">
+                <button class="btn-success" onclick="wsConnect()">Connect</button>
+                <button class="btn-danger" onclick="wsDisconnect()">Disconnect</button>
+            </div>
+        </div>
+        <div class="control-group">
+            <h3>Global Controls</h3>
+            <div class="control-buttons">
+                <button class="btn-primary" onclick="startAll()">Start All</button>
+                <button class="btn-danger" onclick="stopAll()">Stop All</button>
+                <button class="btn-secondary" onclick="clearAllLogs()">Clear Logs</button>
+                <button class="btn-secondary" onclick="clearAllData()">Clear Data</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid">
+        <div class="panel">
+            <div class="panel-header">Connection Logs</div>
+            <div class="panel-content" id="connectionLogs">
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <p>No connection logs yet</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header">Received Data</div>
+            <div class="panel-content" id="receivedData">
+                <div class="empty-state">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path>
+                    </svg>
+                    <p>No data received yet</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // Configuration from Thymeleaf
+    const WS_URL = /*[[${wsUrl}]]*/ 'ws://localhost:8080/ws/metrics';
+    const SSE_URL = /*[[${sseUrl}]]*/ '/sse/stream';
+    const SHORT_POLL_URL = /*[[${shortPollUrl}]]*/ '/polling/short';
+    const LONG_POLL_URL = /*[[${longPollUrl}]]*/ '/polling/long';
+    /*]]>*/
+</script>
+<script th:src="@{/js/monitor.js}"></script>
+</body>
+</html>
